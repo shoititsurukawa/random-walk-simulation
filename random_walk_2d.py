@@ -31,6 +31,7 @@ def first_return_time(seed, max_time=180):
         if x == 0 and y == 0:
             return (seed, steps)
 
+start_total = time.perf_counter()
 # ============================
 # INPUT
 # ============================
@@ -76,3 +77,7 @@ if __name__ == "__main__":
             returned = steps is not None
             writer.writerow([seed, steps if steps is not None else -1, returned])
             print(f"seed={seed} - steps={steps}")
+            
+end_total = time.perf_counter()
+
+print(f"\nTotal execution time: {end_total - start_total:.4f} seconds")
