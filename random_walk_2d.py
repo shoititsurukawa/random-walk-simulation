@@ -16,7 +16,6 @@ steps[directions == 0] = [1, 0]   # right
 steps[directions == 1] = [-1, 0]  # left
 steps[directions == 2] = [0, 1]   # up
 steps[directions == 3] = [0, -1]  # down
-#steps = np.random.randn(n_steps, 2)
 
 # Compute cumulative sum to get positions
 positions = np.cumsum(steps, axis=0)
@@ -27,8 +26,10 @@ positions = np.vstack(([0, 0], positions))
 # Plot
 plt.figure(figsize=(8, 8))
 plt.plot(positions[:, 0], positions[:, 1], linewidth=1)
-plt.scatter(0, 0, marker='o')  # starting point
-plt.scatter(positions[-1, 0], positions[-1, 1], marker='x')  # ending point
+# starting point
+plt.scatter(0, 0, marker='o', s=100)
+# ending point
+plt.scatter(positions[-1, 0], positions[-1, 1], marker='o', s=100)
 
 plt.title('2D Random Walk (seed = 1)')
 plt.xlabel('X')
