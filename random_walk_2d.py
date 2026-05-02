@@ -1,5 +1,6 @@
 import numpy as np
 import time
+import csv
 
 def first_return_time(seed, max_time=60):
     np.random.seed(seed)
@@ -31,11 +32,21 @@ def first_return_time(seed, max_time=60):
         # Check return to origin
         if np.array_equal(position, [0, 0]):
             return steps
-        
-seeds = range(1, 11)
-results = {}
 
-for s in seeds:
-    steps = first_return_time(s, max_time=60)
-    results[s] = steps
-    print(f"seed={s} - steps={steps}")
+# Run simulations
+seeds = range(1, 6)
+
+with open("results.csv", "w", newline="") as f:
+    writer = csv.writer(f)
+    
+    # Header
+    writer.writerow(["seed", "steps", "returned"])
+    
+    for s in seeds:
+        steps = first_return_time(s, max_time=60)
+        returned = steps is not None
+        
+        # Save (-1 for timeout, optional choice)
+        writer.writerow([s, steps if steps is not None else -1, returned])
+        
+        print(f"seed={s} - steps={steps}")
