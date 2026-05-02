@@ -1,11 +1,11 @@
-import numpy as np
 import time
 import csv
 import os
+import random
 from multiprocessing import Pool, cpu_count
 
 def first_return_time(seed, max_time=180):
-    np.random.seed(seed)
+    rng = random.Random(seed)
     
     x, y = 0, 0
     start_time = time.time()
@@ -15,7 +15,7 @@ def first_return_time(seed, max_time=180):
         if time.time() - start_time > max_time:
             return (seed, None)
 
-        direction = np.random.randint(4)
+        direction = rng.randint(0, 3)
 
         if direction == 0:
             x += 1
