@@ -2,8 +2,9 @@ import numpy as np
 import time
 import csv
 import os
+from multiprocessing import Pool, cpu_count
 
-def first_return_time(seed, max_time=60):
+def first_return_time(seed, max_time=180):
     np.random.seed(seed)
     
     x, y = 0, 0
@@ -12,7 +13,7 @@ def first_return_time(seed, max_time=60):
 
     while True:
         if time.time() - start_time > max_time:
-            return None
+            return (seed, None)
 
         direction = np.random.randint(4)
 
@@ -28,16 +29,16 @@ def first_return_time(seed, max_time=60):
         steps += 1
 
         if x == 0 and y == 0:
-            return steps
+            return (seed, steps)
 
 # ============================
-# INPUT: how many new seeds
+# INPUT
 # ============================
-n_new_seeds = 10
+n_new_seeds = 100
 filename = "results.csv"
 
 # ============================
-# Find last seed (if file exists)
+# Find last seed
 # ============================
 last_seed = 0
 
@@ -48,27 +49,30 @@ if os.path.exists(filename):
         if seeds:
             last_seed = max(seeds)
 
-# ============================
-# Generate new seeds
-# ============================
-new_seeds = range(last_seed + 1, last_seed + 1 + n_new_seeds)
+# Generate seeds
+new_seeds = list(range(last_seed + 1, last_seed + 1 + n_new_seeds))
 
 # ============================
-# Append results
+# PARALLEL EXECUTION
 # ============================
-file_exists = os.path.exists(filename)
+if __name__ == "__main__":
+    n_workers = cpu_count()  # use all cores
 
-with open(filename, "a", newline="") as f:
-    writer = csv.writer(f)
+    with Pool(n_workers) as pool:
+        results = pool.map(first_return_time, new_seeds)
 
-    # Write header only if file is new
-    if not file_exists:
-        writer.writerow(["seed", "steps", "returned"])
+    # ============================
+    # WRITE RESULTS
+    # ============================
+    file_exists = os.path.exists(filename)
 
-    for s in new_seeds:
-        steps = first_return_time(s, max_time=60)
-        returned = steps is not None
+    with open(filename, "a", newline="") as f:
+        writer = csv.writer(f)
 
-        writer.writerow([s, steps if steps is not None else -1, returned])
+        if not file_exists:
+            writer.writerow(["seed", "steps", "returned"])
 
-        print(f"seed={s} - steps={steps}")
+        for seed, steps in results:
+            returned = steps is not None
+            writer.writerow([seed, steps if steps is not None else -1, returned])
+            print(f"seed={seed} - steps={steps}")
