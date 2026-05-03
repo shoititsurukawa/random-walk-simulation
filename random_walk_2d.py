@@ -35,7 +35,7 @@ def worker(args):
 if __name__ == "__main__":
     start_total = time.perf_counter()
 
-    n_new_seeds = 32
+    n_new_seeds = 1_000
     max_steps = 100_000_000
     filename = "results.csv"
 
@@ -70,6 +70,8 @@ if __name__ == "__main__":
     # ============================
     # SAVE RESULTS
     # ============================
+    results.sort(key=lambda x: x[0])
+    
     file_exists = os.path.exists(filename)
     with open(filename, "a", newline="") as f:
         writer = csv.writer(f)
