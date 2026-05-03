@@ -1,94 +1,78 @@
-import numpy as np
-from numba import njit
 import csv
+import os
+import time
+from multiprocessing import Pool, cpu_count
+from tqdm import tqdm
+from walk_logic import first_return_time_numba  # Import your core logic
 
-# ============================
-# NUMBA FUNCTION
-# ============================
-@njit
-def first_return_time_numba(seed, max_steps):
-    np.random.seed(seed)
+def worker(args):
+    seed, max_steps = args
+    steps = first_return_time_numba(seed, max_steps)
+    return (seed, steps if steps != -1 else None)
+
+if __name__ == "__main__":
+    # Configuration
+    N_RERUN_SEEDS = 16
+    MAX_STEPS = 100_000_000_000
+    FILENAME = "results.csv"
     
-    x = 0
-    y = 0
+    start_total = time.perf_counter()
 
-    for steps in range(1, max_steps + 1):
-        direction = np.random.randint(4)
+    # Prepare Seeds
+    all_rows = []
+    seeds_to_rerun = []
 
-        if direction == 0:
-            x += 1
-        elif direction == 1:
-            x -= 1
-        elif direction == 2:
-            y += 1
-        else:
-            y -= 1
+    if not os.path.exists(FILENAME):
+        print(f"Error: {FILENAME} not found.")
+        exit()
 
-        if x == 0 and y == 0:
-            return steps
+    with open(FILENAME, "r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            # We identify failed seeds where returned is 'False' or steps is -1
+            if row["returned"] == "False" and len(seeds_to_rerun) < N_RERUN_SEEDS:
+                seeds_to_rerun.append(int(row["seed"]))
+            all_rows.append(row)
 
-    return -1
+    if not seeds_to_rerun:
+        print("No seeds with 'returned=False' found to rerun. Exiting.")
+        exit()
 
-# ============================
-# INPUT
-# ============================
-seed_to_rerun = 17
-max_steps = 500_000_000_000  # increase this
-filename = "results.csv"
+    print(f"Found {len(seeds_to_rerun)} seeds to refine: {seeds_to_rerun}")
 
-# ============================
-# PRECOMPILE NUMBA
-# ============================
-print("Compiling Numba...")
-first_return_time_numba(1, 10)
+    # Warm up Numba
+    print("Compiling Numba...")
+    first_return_time_numba(1, 10)
 
-# ============================
-# RE-RUN SEED
-# ============================
-print(f"Re-running seed {seed_to_rerun}...")
-steps = first_return_time_numba(seed_to_rerun, max_steps)
+    # Parallel Execution
+    n_workers = cpu_count()
+    print(f"Refining using {n_workers} workers...")
+    
+    args = [(s, MAX_STEPS) for s in seeds_to_rerun]
+    refined_results = {} # Use a dict for easy lookup: {seed: steps}
 
-returned = steps != -1
-steps_out = steps if returned else -1
+    with Pool(n_workers) as pool:
+        for seed, steps in tqdm(pool.imap_unordered(worker, args), total=len(args), desc="Refining"):
+            refined_results[seed] = steps
 
-print(f"Result: steps={steps_out}, returned={returned}")
+    # Save
+    # We update the 'all_rows' list with the new data
+    for row in all_rows:
+        s_id = int(row["seed"])
+        if s_id in refined_results:
+            new_steps = refined_results[s_id]
+            if new_steps is not None:
+                row["steps"] = str(new_steps)
+                row["returned"] = "True"
+                print(f"Seed {s_id} FIXED: {new_steps} steps")
+            else:
+                print(f"Seed {s_id} TIMEOUT again at {MAX_STEPS} steps.")
 
-# ============================
-# LOAD CSV
-# ============================
-rows = []
+    # Save back to CSV (Overwriting with updated rows)
+    with open(FILENAME, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["seed", "steps", "returned"])
+        writer.writeheader()
+        writer.writerows(all_rows)
 
-with open(filename, "r") as f:
-    reader = csv.DictReader(f)
-    for row in reader:
-        rows.append(row)
-
-# ============================
-# UPDATE TARGET SEED
-# ============================
-updated = False
-
-for row in rows:
-    if int(row["seed"]) == seed_to_rerun:
-        row["steps"] = str(steps_out)
-        row["returned"] = str(returned)
-        updated = True
-        break
-
-if not updated:
-    print("Seed not found in file. Adding it.")
-    rows.append({
-        "seed": str(seed_to_rerun),
-        "steps": str(steps_out),
-        "returned": str(returned)
-    })
-
-# ============================
-# SAVE BACK TO CSV
-# ============================
-with open(filename, "w", newline="") as f:
-    writer = csv.DictWriter(f, fieldnames=["seed", "steps", "returned"])
-    writer.writeheader()
-    writer.writerows(rows)
-
-print("CSV updated successfully.")
+    end_total = time.perf_counter()
+    print(f"\nRefinement complete in {end_total - start_total:.2f} seconds.")
