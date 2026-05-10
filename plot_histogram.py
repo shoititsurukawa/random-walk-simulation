@@ -7,13 +7,27 @@ import matplotlib.pyplot as plt
 filename = "results.csv"
 steps = []
 
+# Variables to track the maximum step and its corresponding seed
+max_seed = None
+max_step = -1
+
 # Read CSV
 with open(filename, "r") as f:
     reader = csv.DictReader(f)
     for row in reader:
         value = int(row["steps"])
-        if value != -1:  # ignore timeouts
+        seed = int(row["seed"])
+        
+        # ignore timeouts
+        if value != -1:
             steps.append(value)
+            
+            # Check if this walk has the highest step count so far
+            if value > max_step:
+                max_step = value
+                max_seed = seed
+
+print(f"The seed with the max steps is {max_seed} with {max_step} steps.")
 
 # Plot Histogram
 plt.figure(figsize=(8, 6))
