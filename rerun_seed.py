@@ -1,22 +1,19 @@
+# rerun_seed.py
+
 import csv
 import os
 import time
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
-from walk_logic import first_return_time_numba  # Import your core logic
-
-def worker(args):
-    seed, max_steps = args
-    steps = first_return_time_numba(seed, max_steps)
-    return (seed, steps if steps != -1 else None)
+from walk_logic import first_return_time_numba, worker
 
 if __name__ == "__main__":
-    # Configuration
-    N_RERUN_SEEDS = 16
-    MAX_STEPS = 100_000_000_000
-    FILENAME = "results.csv"
+    start_time = time.perf_counter()
     
-    start_total = time.perf_counter()
+    # Configuration
+    N_RERUN_SEEDS = 1000
+    MAX_STEPS = 10**8
+    FILENAME = "results.csv"
 
     # Prepare Seeds
     all_rows = []
@@ -64,7 +61,7 @@ if __name__ == "__main__":
             if new_steps is not None:
                 row["steps"] = str(new_steps)
                 row["returned"] = "True"
-                print(f"Seed {s_id} FIXED: {new_steps} steps")
+                print(f"Seed {s_id} FIXED: {new_steps} steps.")
             else:
                 print(f"Seed {s_id} TIMEOUT again at {MAX_STEPS} steps.")
 
@@ -74,5 +71,5 @@ if __name__ == "__main__":
         writer.writeheader()
         writer.writerows(all_rows)
 
-    end_total = time.perf_counter()
-    print(f"\nRefinement complete in {end_total - start_total:.2f} seconds.")
+    print(f"\nTotal time: {time.perf_counter() - start_time:.2f}s")
+    

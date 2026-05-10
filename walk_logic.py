@@ -1,3 +1,4 @@
+# walk_logic.py
 import numpy as np
 from numba import njit
 
@@ -16,3 +17,8 @@ def first_return_time_numba(seed, max_steps):
         if x == 0 and y == 0:
             return steps
     return -1
+
+def worker(args):
+    seed, max_steps = args
+    steps = first_return_time_numba(seed, max_steps)
+    return (seed, steps if steps != -1 else None)

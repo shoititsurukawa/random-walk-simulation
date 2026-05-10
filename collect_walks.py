@@ -1,14 +1,10 @@
+# collect_walks.py
 import csv
 import os
 import time
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
-from walk_logic import first_return_time_numba
-
-def worker(args):
-    seed, max_steps = args
-    steps = first_return_time_numba(seed, max_steps)
-    return (seed, steps if steps != -1 else None)
+from walk_logic import first_return_time_numba, worker
 
 def get_last_seed(filename):
     if not os.path.exists(filename):
@@ -19,12 +15,12 @@ def get_last_seed(filename):
         return max(seeds) if seeds else 0
 
 if __name__ == "__main__":
-    # Configuration
-    N_NEW_SEEDS = 10_000
-    MAX_STEPS = 100_000_000
-    FILENAME = "results.csv"
-    
     start_time = time.perf_counter()
+    
+    # Configuration
+    N_NEW_SEEDS = 10_000 
+    MAX_STEPS = 10**8
+    FILENAME = "results.csv"
     
     # Prepare Seeds
     last_seed = get_last_seed(FILENAME)
@@ -56,3 +52,4 @@ if __name__ == "__main__":
             writer.writerow([seed, steps if steps is not None else -1, steps is not None])
 
     print(f"\nTotal time: {time.perf_counter() - start_time:.2f}s")
+    
